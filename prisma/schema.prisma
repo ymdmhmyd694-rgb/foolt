@@ -1,0 +1,116 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String?
+  cashtag   String?  @unique
+  
+  // Stripe Connect
+  connectAccount StripeConnectAccount?
+  
+  
+  // Relations
+  ledgerAccounts  LedgerAccount[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Auth relations
+  accounts      Account[]
+  sessions      Session[]
+  password      String? // For credentials provider
+}
+
+model Account {
+  id                 String  @id @default(cuid())
+  userId             String
+  type               String
+  provider           String
+  providerAccountId  String
+  refresh_token      String?
+  access_token       String?
+  expires_at         Int?
+  token_type         String?
+  scope              String?
+  id_token           String?
+  session_state      String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model LedgerAccount {
+  id        String   @id @default(uuid())
+  name      String
+  type      String   // AccountType
+  currency  String   @default("USD")
+  balance   BigInt   @default(0)
+  
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  
+  entries   LedgerEntry[]
+  
+  createdAt DateTime @default(now())
+}
+
+model LedgerTransaction {
+  id          String   @id @default(uuid())
+  description String
+  reference   String?
+  postedAt    DateTime @default(now())
+  metadata    String?
+  
+  entries     LedgerEntry[]
+}
+
+model LedgerEntry {
+  id            String   @id @default(uuid())
+  amount        BigInt
+  direction     String   // EntryDirection
+  
+  accountId     String
+  account       LedgerAccount @relation(fields: [accountId], references: [id])
+  
+  transactionId String
+  transaction   LedgerTransaction @relation(fields: [transactionId], references: [id])
+  
+  createdAt     DateTime @default(now())
+}
+
+model StripeConnectAccount {
+  id              String    @id @default(uuid())
+  stripeAccountId String    @unique
+  kycStatus       String    @default("PENDING") // KycStatus
+  
+  userId          String    @unique
+  user            User      @relation(fields: [userId], references: [id])
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
