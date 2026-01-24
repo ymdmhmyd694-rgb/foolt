@@ -1,125 +1,100 @@
-# Deployment Guide for Cash App Clone (Hostinger VPS)
+# Deploying Cash App Clone to Hostinger VPS
 
-This guide walks you through deploying your Next.js application to a Hostinger VPS (Virtual Private Server).
-
-> [!IMPORTANT]
-> This guide is for **VPS Hosting** (e.g., Ubuntu 22.04). If you have "Web Hosting" or "Cloud Hosting", you cannot run this app effectively because it requires a persistent Node.js server and database process.
+This guide assumes you have a Hostinger VPS with **Ubuntu 22.04** or **Debian 11/12**.
 
 ## Prerequisites
-
-1.  **Hostinger VPS Plan** (KVM 1 or higher recommended).
-2.  **Domain Name** pointed to your VPS IP address (A Record).
-3.  **SSH Access** to your VPS.
+1.  **SSH Access**: You know your VPS IP (e.g., `123.45.67.89`) and root password.
+2.  **Neon Database**: You have your connection string `postgres://...`
+3.  **Code**: You have pushed your latest code to GitHub.
 
 ---
 
-## Step 1: Server Setup (First Time Only)
-
-Connect to your VPS via SSH:
+## Step 1: Connect to your VPS
+Open your terminal (PowerShell on Windows, Terminal on Mac) and run:
 ```bash
-ssh root@your_vps_ip
+ssh root@<YOUR_VPS_IP>
+# Type yes if asked about fingerprint
+# Enter your password (it won't show on screen when typing)
 ```
 
-### 1. Update System
+## Step 2: Install Node.js 20 and Git
+Copy and paste these commands into your VPS terminal:
 ```bash
+# Update system
 apt update && apt upgrade -y
-```
 
-### 2. Install Node.js (v20)
-```bash
+# Install Node.js 20
 curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
-apt install -y nodejs
-```
+apt install -y nodejs git
 
-### 3. Install Process Manager (PM2)
-PM2 keeps your app running 24/7.
-```bash
+# Install PM2 (Process Manager) globally
 npm install -g pm2
 ```
 
-### 4. Install Nginx (Web Server)
-Nginx will handle traffic and SSL.
+## Step 3: Clone Your Project
+Navigate to the web directory and clone your repo.
+*Replace `<YOUR_GITHUB_REPO_URL>` with your actual URL (e.g., https://github.com/username/repo.git)*
 ```bash
-apt install -y nginx
-```
-
----
-
-## Step 2: Deploying the App
-
-### 1. Upload Your Code
-You can clone from GitHub (recommended) or use SCP/FileZilla.
-
-**Option A: GitHub (Recommended)**
-```bash
-# Generate secure SSH key for GitHub
-ssh-keygen -t ed25519 -C "your_email@example.com"
-cat ~/.ssh/id_ed25519.pub
-# Add this key to your GitHub Repo -> Settings -> Deploy Keys
-
-# Clone into /var/www/cash-app
 mkdir -p /var/www
 cd /var/www
-git clone git@github.com:yourusername/cash-app.git
+
+# Clone the repo
+git clone <YOUR_GITHUB_REPO_URL> cash-app
+
+# Enter the directory
 cd cash-app
 ```
 
-### 2. Install Dependencies
+## Step 4: Install Dependencies & Build
 ```bash
+# Install packages
 npm install
-```
 
-### 3. Configure Environment Variables
-Create a `.env.local` file for production keys.
-```bash
-nano .env.local
-```
+# Generate Prisma Client
+npx prisma generate
 
-Paste your secrets (Right-click to paste in Nano):
-```env
-AUTH_SECRET="your_generated_secret_here" # run `npx auth secret` to generate
-DATABASE_URL="file:./dev.db" 
-# Add your Stripe keys here
-```
-*Press `Ctrl+X`, then `Y`, then `Enter` to save.*
-
-### 4. Build the Application
-Run the check script first to ensure everything is ready.
-```bash
-npm run deploy:check
+# Build the project
 npm run build
 ```
 
----
-
-## Step 3: Run with PM2
-
-Start the application in the background.
-
+## Step 5: Configure Environment Variables
+You need to create a `.env` file on the server.
 ```bash
-pm2 start npm --name "cash-app" -- start
+nano .env
+```
+**Paste inside the file (Right-click in terminal to paste):**
+```env
+DATABASE_URL="<YOUR_NEON_DATABASE_URL>"
+AUTH_SECRET="<YOUR_AUTH_SECRET>"
+NEXTAUTH_URL="http://<YOUR_VPS_IP>:3000"
+# Add other secrets here (STRIPE_SECRET_KEY, etc.)
+```
+*Save and Exit: Press `Ctrl+X`, then `Y`, then `Enter`.*
+
+## Step 6: Start the App with PM2
+Use the `ecosystem.config.js` file we created.
+```bash
+pm2 start ecosystem.config.js
 pm2 save
 pm2 startup
-# Run the command PM2 prints out to ensure it starts on reboot
+# Run the command displayed by pm2 startup if any
 ```
+
+## Step 7: Verify
+Open your browser and search: `http://<YOUR_VPS_IP>:3000`
 
 ---
 
-## Step 4: Configure Nginx & SSL
+### (Optional) Setup Nginx for Domain Name
+If you have a domain (e.g., `myapp.com`), configure Nginx to forward port 80 to 3000.
 
-### 1. Setup Nginx Proxy
-Remove default config and create a new one:
-```bash
-rm /etc/nginx/sites-enabled/default
-nano /etc/nginx/sites-available/cash-app
-```
-
-Paste the following (replace `yourdomain.com`):
+1. Install Nginx: `apt install -y nginx`
+2. Create config: `nano /etc/nginx/sites-available/cash-app`
+3. Paste:
 ```nginx
 server {
     listen 80;
-    server_name yourdomain.com www.yourdomain.com;
-
+    server_name myapp.com www.myapp.com; # <--- CHANGE THIS
     location / {
         proxy_pass http://localhost:3000;
         proxy_http_version 1.1;
@@ -130,26 +105,9 @@ server {
     }
 }
 ```
-
-Enable the site:
+4. Enable and Restart:
 ```bash
 ln -s /etc/nginx/sites-available/cash-app /etc/nginx/sites-enabled/
-nginx -t # Check for errors
+rm /etc/nginx/sites-enabled/default
 systemctl restart nginx
 ```
-
-### 2. Install SSL (HTTPS)
-Use Certbot for free SSL.
-```bash
-apt install -y certbot python3-certbot-nginx
-certbot --nginx -d yourdomain.com -d www.yourdomain.com
-```
-
-**Done!** Your app should now be live at `https://yourdomain.com`.
-
----
-
-## Troubleshooting
-
--   **App offline?**: Run `pm2 status` or `pm2 logs cash-app`.
--   **Database locked?**: SQLite on VPS works well for single-instance. If you scale, switch to PostgreSQL.

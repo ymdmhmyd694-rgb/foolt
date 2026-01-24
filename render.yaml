@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: cash-app
+    env: node
+    plan: free # or starter
+    buildCommand: npm install && npx prisma generate && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false # You will be prompted to enter this in Render Dashboard
+      - key: AUTH_SECRET
+        sync: false # You will be prompted to enter this in Render Dashboard
+      - key: STRIPE_SECRET_KEY
+        sync: false # Optional: Enter if using Stripe
