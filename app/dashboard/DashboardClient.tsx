@@ -47,7 +47,7 @@ export default function Dashboard() {
         return (
             <main className="min-h-screen bg-cash-black text-white p-6 flex flex-col items-center justify-center">
                 <h1 className="text-xl font-bold mb-4">Account Not Found</h1>
-                <p className="text-cash-text-gray mb-8">We couldn't find your account details.</p>
+                <p className="text-cash-text-gray mb-8">We couldn&apos;t find your account details.</p>
                 <Link href="/login" className="w-full max-w-xs">
                     <Button variant="secondary" className="w-full pointer-events-none" tabIndex={-1}>Log In Again</Button>
                 </Link>
