@@ -1,9 +1,9 @@
 'use client'
 
 import { useFormState } from 'react-dom'
-import { authenticate } from '@/app/lib/actions'
-import { Button } from '@/components/ui/Button'
-import { Input } from '@/components/ui/Input'
+import { authenticate } from '../lib/actions'
+import { Button } from '../../components/ui/Button'
+import { Input } from '../../components/ui/Input'
 
 export default function Page() {
     const [errorMessage, dispatch] = useFormState(authenticate, undefined)
