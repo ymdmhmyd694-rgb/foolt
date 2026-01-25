@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { Button } from "../../components/ui/Button"
 import Link from "next/link"
-import { getDashboardData } from "@/app/actions/dashboard"
+import { getDashboardData } from "../actions/dashboard"
 import Loading from "./loading"
 
 export default function Dashboard() {
