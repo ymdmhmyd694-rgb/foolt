@@ -1,5 +1,9 @@
 import type { NextAuthConfig } from "next-auth"
 import Credentials from "next-auth/providers/credentials"
+import { z } from "zod"
+
+import { prisma } from "./lib/prisma"
+import bcrypt from "bcryptjs"
 
 export const authConfig = {
     providers: [
@@ -10,12 +14,20 @@ export const authConfig = {
                 password: { label: "Password", type: "password" }
             },
             async authorize(credentials) {
-                if (!credentials?.email || !credentials?.password) return null;
-                // Logic to verify user against Prisma DB would go here
-                // For MVP/Build verification, returning a mock user if matching dev creds
-                if (credentials.email === "dev@cash.app" && credentials.password === "password") {
-                    return { id: "1", name: "Dev User", email: "dev@cash.app" }
+                const parsedCredentials = z
+                    .object({ email: z.string().email(), password: z.string().min(6) })
+                    .safeParse(credentials);
+
+                if (parsedCredentials.success) {
+                    const { email, password } = parsedCredentials.data;
+                    const user = await prisma.user.findUnique({ where: { email } });
+
+                    if (!user) return null;
+
+                    const passwordsMatch = await bcrypt.compare(password, user.password || "");
+                    if (passwordsMatch) return user;
                 }
+
                 return null;
             }
         }),
@@ -24,7 +36,6 @@ export const authConfig = {
         signIn: "/login",
     },
     callbacks: {
-        // Authorized callback removed to prevent build-time redirects.
-        // Route protection is handled by the Page component.
+        // Route protection handles redirects
     },
 } satisfies NextAuthConfig

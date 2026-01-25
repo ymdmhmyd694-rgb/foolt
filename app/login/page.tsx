@@ -4,6 +4,7 @@ import { useFormState } from 'react-dom'
 import { authenticate } from '../lib/actions'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
+import Link from 'next/link'
 
 export default function Page() {
     const [errorMessage, dispatch] = useFormState(authenticate, undefined)
@@ -27,6 +28,13 @@ export default function Page() {
                         <div className="text-red-500 text-center text-sm">{errorMessage}</div>
                     )}
                 </form>
+
+                <div className="text-center text-cash-text-gray text-sm">
+                    Don&apos;t have an account?{' '}
+                    <Link href="/register" className="text-cash-green hover:underline">
+                        Sign up
+                    </Link>
+                </div>
             </div>
         </main>
     )

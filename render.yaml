@@ -3,7 +3,7 @@ services:
     name: cash-app
     env: node
     plan: free # or starter
-    buildCommand: npm install && npx prisma generate && npm run build
+    buildCommand: npm install && npx prisma migrate deploy && npx prisma generate && npm run build
     startCommand: npm start
     envVars:
       - key: NODE_ENV
