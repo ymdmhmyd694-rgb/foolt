@@ -1,8 +1,8 @@
 'use server'
 
-import { auth } from "@/auth"
-import { prisma } from "@/lib/prisma"
-import { stripe } from "@/lib/stripe"
+import { auth } from "../../auth"
+import { prisma } from "../../lib/prisma"
+import { stripe } from "../../lib/stripe"
 import { redirect } from "next/navigation"
 
 export async function createStripeOnboarding() {
