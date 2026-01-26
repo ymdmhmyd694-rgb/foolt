@@ -5,11 +5,19 @@ import { Button } from "../../components/ui/Button"
 import Link from "next/link"
 import { getDashboardData } from "../actions/dashboard"
 import Loading from "./loading"
+import { Modal } from "../../components/ui/Modal"
+import { Input } from "../../components/ui/Input"
+import { addCash, cashOut } from "../actions/transaction"
 
 export default function Dashboard() {
     const [data, setData] = useState<any>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
+
+    // Transaction State
+    const [isAddCashOpen, setIsAddCashOpen] = useState(false)
+    const [isCashOutOpen, setIsCashOutOpen] = useState(false)
+    const [transactionState, setTransactionState] = useState<{ success?: boolean; message?: string } | null>(null)
 
     useEffect(() => {
         async function load() {
@@ -28,6 +36,22 @@ export default function Dashboard() {
         }
         load()
     }, [])
+
+    async function handleTransaction(action: any, formData: FormData) {
+        setTransactionState(null)
+        const result = await action(null, formData)
+
+        if (result.success) {
+            setIsAddCashOpen(false)
+            setIsCashOutOpen(false)
+            // Refresh data
+            const newData = await getDashboardData()
+            if (newData.data) setData(newData.data)
+            alert(result.message)
+        } else {
+            setTransactionState(result)
+        }
+    }
 
     if (loading) return <Loading />
 
@@ -88,9 +112,50 @@ export default function Dashboard() {
 
             {/* Action Buttons */}
             <section className="grid grid-cols-2 gap-4 mb-8">
-                <Button variant="secondary" className="w-full">Add Cash</Button>
-                <Button variant="secondary" className="w-full">Cash Out</Button>
+                <Button variant="secondary" className="w-full" onClick={() => setIsAddCashOpen(true)}>Add Cash</Button>
+                <Button variant="secondary" className="w-full" onClick={() => setIsCashOutOpen(true)}>Cash Out</Button>
             </section>
+
+            {/* Add Cash Modal */}
+            <Modal isOpen={isAddCashOpen} onClose={() => setIsAddCashOpen(false)} title="Add Cash">
+                <form action={(fd) => handleTransaction(addCash, fd)} className="space-y-4">
+                    <div>
+                        <Input
+                            name="amount"
+                            type="number"
+                            step="0.01"
+                            placeholder="$0.00"
+                            className="text-center text-2xl"
+                            autoFocus
+                        />
+                    </div>
+                    {transactionState?.message && !transactionState.success && (
+                        <p className="text-red-500 text-sm text-center">{transactionState.message}</p>
+                    )}
+                    <Button className="w-full">Add Money</Button>
+                </form>
+            </Modal>
+
+            {/* Cash Out Modal */}
+            <Modal isOpen={isCashOutOpen} onClose={() => setIsCashOutOpen(false)} title="Cash Out">
+                <form action={(fd) => handleTransaction(cashOut, fd)} className="space-y-4">
+                    <div>
+                        <Input
+                            name="amount"
+                            type="number"
+                            step="0.01"
+                            placeholder="$0.00"
+                            className="text-center text-2xl"
+                            autoFocus
+                        />
+                    </div>
+                    {transactionState?.message && !transactionState.success && (
+                        <p className="text-red-500 text-sm text-center">{transactionState.message}</p>
+                    )}
+                    <Button className="w-full">Cash Out</Button>
+                </form>
+            </Modal>
+
 
             {/* KYC Prompt (Simplified for Client Comp) */}
             {!isVerified && (
